@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+*.egg
+.venv/
+venv/
+env/
+
+# Database
+*.db
+*.db-journal
+
+# Environment
+.env
+.env.local
+
+# Prisma
+prisma/migrations/
+
+# Node / Dashboard
+node_modules/
+.next/
+dashboard/.next/
+dashboard/node_modules/
+sdk/node_modules/
+sdk/dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+*.pyc
+build/

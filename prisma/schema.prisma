@@ -1,0 +1,166 @@
+// ──────────────────────────────────────────────
+// PIEE — Unified Prisma Schema
+// Shared across local and cloud deployments
+// ──────────────────────────────────────────────
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider             = "prisma-client-py"
+  recursive_type_depth = 5
+}
+
+// ──────────────────────────────────────────────
+// Auth & Users
+// ──────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String // bcrypt hashed
+  name      String?
+  role      String   @default("user") // user | admin | superadmin
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  apiKeys      ApiKey[]
+  creditWallet CreditWallet?
+  usageLogs    UsageLog[]
+  auditLogs    AuditLog[]
+}
+
+model ApiKey {
+  id           String   @id @default(cuid())
+  userId       String
+  name         String
+  keyHash      String   @unique // SHA-256 hash of the actual key
+  keyPrefix    String // First 8 chars for identification (e.g., "pk-xxxx...")
+  permissions  String   @default("all") // JSON array of allowed scopes
+  isActive     Boolean  @default(true)
+  lastUsedAt   DateTime?
+  expiresAt    DateTime?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ──────────────────────────────────────────────
+// Model Registry & Provider Configuration
+// ──────────────────────────────────────────────
+
+model ModelRegistry {
+  id               String   @id @default(cuid())
+  modelId          String   @unique // e.g., "openai/gpt-4o", "anthropic/claude-3-opus"
+  displayName      String
+  provider         String // e.g., "openai", "anthropic", "local"
+  routingMode      String   @default("REMOTE") // LOCAL | REMOTE | INTERNAL
+  capabilities     String   @default("[]") // JSON: ["chat", "embeddings", "vision"]
+  contextWindow    Int      @default(4096)
+  inputPricePerM   Float    @default(0) // Price per 1M input tokens
+  outputPricePerM  Float    @default(0) // Price per 1M output tokens
+  isActive         Boolean  @default(true)
+  isPremium        Boolean  @default(false)
+  fallbackModelId  String? // Fallback chain: model to try if this one fails
+  metadata         String   @default("{}") // JSON for arbitrary extra config
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  usageLogs UsageLog[]
+}
+
+model ProviderConfig {
+  id              String   @id @default(cuid())
+  providerName    String   @unique // e.g., "openai", "anthropic"
+  displayName     String
+  baseUrl         String // API base URL
+  apiKeyEncrypted String? // Fernet-encrypted API key
+  isActive        Boolean  @default(true)
+  rateLimitRpm    Int      @default(60) // requests per minute
+  rateLimitTpm    Int      @default(100000) // tokens per minute
+  metadata        String   @default("{}") // JSON for provider-specific config
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ──────────────────────────────────────────────
+// Billing & Credits (cloud only, but schema shared)
+// ──────────────────────────────────────────────
+
+model CreditWallet {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  balance   Float    @default(0)
+  currency  String   @default("USD")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions CreditTransaction[]
+}
+
+model CreditTransaction {
+  id          String   @id @default(cuid())
+  walletId    String
+  amount      Float // positive = credit, negative = debit
+  type        String // "topup" | "usage" | "refund" | "adjustment"
+  description String?
+  referenceId String? // e.g., usage log ID
+  createdAt   DateTime @default(now())
+
+  wallet CreditWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+}
+
+// ──────────────────────────────────────────────
+// Usage Logging & Audit
+// ──────────────────────────────────────────────
+
+model UsageLog {
+  id              String   @id @default(cuid())
+  userId          String
+  modelRegistryId String
+  requestType     String // "chat" | "embedding" | "completion"
+  inputTokens     Int      @default(0)
+  outputTokens    Int      @default(0)
+  totalTokens     Int      @default(0)
+  latencyMs       Int      @default(0)
+  cost            Float    @default(0)
+  statusCode      Int      @default(200)
+  errorMessage    String?
+  metadata        String   @default("{}") // JSON
+  createdAt       DateTime @default(now())
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  model ModelRegistry @relation(fields: [modelRegistryId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String // e.g., "user.login", "api_key.create", "model.update"
+  resource  String? // e.g., "user:abc123", "model:gpt-4o"
+  details   String   @default("{}") // JSON with extra context
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+// ──────────────────────────────────────────────
+// Feature Flags
+// ──────────────────────────────────────────────
+
+model FeatureFlag {
+  id           String   @id @default(cuid())
+  key          String   @unique // e.g., "billing_enabled"
+  value        Boolean  @default(false)
+  description  String?
+  localDefault Boolean  @default(false) // default for local mode
+  cloudDefault Boolean  @default(true) // default for cloud mode
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

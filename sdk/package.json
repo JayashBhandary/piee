@@ -1,0 +1,27 @@
+{
+    "name": "@piee/sdk",
+    "version": "0.1.0",
+    "description": "PIEE — Unified AI Infrastructure SDK. Works with both local and cloud deployments.",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "prepublishOnly": "npm run build"
+    },
+    "keywords": [
+        "piee",
+        "ai",
+        "openai",
+        "llm",
+        "sdk",
+        "infrastructure"
+    ],
+    "license": "MIT",
+    "devDependencies": {
+        "typescript": "^5.3.0"
+    }
+}

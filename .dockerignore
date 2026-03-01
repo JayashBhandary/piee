@@ -1,0 +1,40 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+.venv
+venv
+env
+*.egg-info
+
+# Node
+node_modules
+dashboard/node_modules
+dashboard/.next
+sdk/node_modules
+sdk/dist
+
+# Database
+*.db
+*.db-journal
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+Makefile
+README.md

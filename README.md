@@ -45,10 +45,34 @@ PIEE is a unified AI infrastructure platform designed for dual deployment — ru
 
 ## Quick Start
 
-### 1. Backend
+### Method 1: Docker (Recommended)
+
+The easiest way to run the full stack (API + Dashboard) is using Docker Compose:
 
 ```bash
 cd PIEE
+cp .env.example .env
+make docker-up
+```
+
+Access the dashboard at `http://localhost:3000` and the API at `http://localhost:8000`.
+
+### Method 2: Make (Local Development)
+
+You can run the stack locally using the provided `Makefile`:
+
+```bash
+cd PIEE
+make setup   # Creates .env, installs Python/Node dependencies, sets up DB
+make dev     # Starts both API (8000) and Dashboard (3000) in parallel
+```
+
+*Run `make help` to see all available commands.*
+
+### Method 3: Manual Startup
+
+**1. Backend**
+```bash
 cp .env.example .env
 pip3 install -r requirements.txt
 python3 -m prisma generate
@@ -56,15 +80,14 @@ python3 -m prisma db push
 python3 -m uvicorn app.main:app --port 8000
 ```
 
-### 2. Dashboard
-
+**2. Dashboard**
 ```bash
 cd dashboard
 bun install   # or npm install
 bun run dev   # → http://localhost:3000
 ```
 
-### 3. SDK
+### SDK Example
 
 ```typescript
 import PIEE from "@piee/sdk";
@@ -100,6 +123,9 @@ PIEE/
 ├── sdk/                  # TypeScript SDK
 ├── dashboard/            # Next.js + shadcn/ui
 ├── prisma/               # Database schema
+├── docker-compose.yml    # Docker services config
+├── Dockerfile            # Backend multi-stage build
+├── Makefile              # Helper commands for local dev
 ├── .env.example          # Environment template
 └── requirements.txt      # Python dependencies
 ```

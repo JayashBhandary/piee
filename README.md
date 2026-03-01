@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="dashboard/assets/logo.png" width="80" alt="PIEE Logo" />
+  <img src="dashboard/assets/logo_ts.png" width="80" alt="PIEE Logo" />
 </p>
 
 <h1 align="center">PIEE</h1>

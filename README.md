@@ -64,9 +64,11 @@ You can run the stack locally using the provided `Makefile`:
 ```bash
 cd PIEE
 cp .env.example .env
-make setup   # Creates .env, installs Python/Node dependencies, sets up DB
+make setup   # Creates .env, Python .venv, installs Node deps, sets up DB
 make dev     # Starts both API (8000) and Dashboard (3000) in parallel
 ```
+
+The backend runs inside a localized Python virtual environment (`.venv`). If you need to run python commands manually, either activate it (`source .venv/bin/activate`) or use the binaries in `.venv/bin/`.
 
 ### Code Quality & Testing
 You can run the new industry standard tooling with the following commands:

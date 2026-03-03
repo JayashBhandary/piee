@@ -7,8 +7,16 @@ SHELL := /bin/bash
 
 # ── Variables ─────────────────────────────────
 PYTHON   := python3
-PIP      := pip3
-UVICORN  := uvicorn
+VENV     := .venv
+VENV_BIN := $(VENV)/bin
+VENV_PIP := $(VENV_BIN)/pip
+VENV_PYTHON := $(VENV_BIN)/python
+
+UVICORN  := $(VENV_BIN)/uvicorn
+PYTEST   := $(VENV_BIN)/pytest
+RUFF     := $(VENV_BIN)/ruff
+MYPY     := $(VENV_BIN)/mypy
+
 BUN      := bun
 NPM      := npm
 DOCKER   := docker compose
@@ -40,13 +48,18 @@ help: ## Show this help
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 .PHONY: install
-install: install-api install-dashboard ## Install all dependencies
+install: venv install-dashboard ## Install all dependencies
 
-.PHONY: install-api
-install-api: ## Install backend dependencies
-	@echo "$(GREEN)→ Installing backend dependencies…$(RESET)"
-	$(PIP) install -r requirements.txt
-	$(PIP) install -r requirements-dev.txt
+.PHONY: venv
+venv: $(VENV)/touchfile ## Create virtual environment and install backend dependencies
+
+$(VENV)/touchfile: requirements.txt requirements-dev.txt
+	@echo "$(GREEN)→ Creating virtual environment and installing backend dependencies…$(RESET)"
+	$(PYTHON) -m venv $(VENV)
+	$(VENV_PIP) install --upgrade pip
+	$(VENV_PIP) install -r requirements.txt
+	$(VENV_PIP) install -r requirements-dev.txt
+	touch $(VENV)/touchfile
 
 .PHONY: install-dashboard
 install-dashboard: ## Install dashboard dependencies
@@ -67,21 +80,21 @@ env: ## Create .env from .env.example (if missing)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 .PHONY: db-generate
-db-generate: ## Generate Prisma client
+db-generate: venv ## Generate Prisma client
 	@echo "$(GREEN)→ Generating Prisma client…$(RESET)"
-	$(PYTHON) -m prisma generate
+	PRISMA_PY_DEBUG=0 PRISMA_PYTHON=$(VENV_PYTHON) $(VENV_PYTHON) -m prisma generate
 
 .PHONY: db-push
-db-push: ## Push schema to database
+db-push: venv ## Push schema to database
 	@echo "$(GREEN)→ Pushing schema to database…$(RESET)"
-	$(PYTHON) -m prisma db push
+	$(VENV_PYTHON) -m prisma db push
 
 .PHONY: db-setup
 db-setup: db-generate db-push ## Generate client + push schema
 
 .PHONY: db-studio
-db-studio: ## Open Prisma Studio
-	$(PYTHON) -m prisma studio
+db-studio: venv ## Open Prisma Studio
+	$(VENV_PYTHON) -m prisma studio
 
 .PHONY: db-reset
 db-reset: ## Reset database (destructive!)
@@ -173,20 +186,20 @@ clean-all: clean ## Deep clean (includes node_modules, venv)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 .PHONY: lint
-lint: ## Run linters (backend and frontend)
+lint: venv ## Run linters (backend and frontend)
 	@echo "$(GREEN)→ Linting backend (ruff)…$(RESET)"
-	ruff check .
+	$(RUFF) check .
 	@echo "$(GREEN)→ Linting frontend (eslint)…$(RESET)"
 	cd dashboard && $(BUN) run lint 2>/dev/null || $(NPM) run lint
 
 .PHONY: format
-format: ## Run formatters (backend and frontend)
+format: venv ## Run formatters (backend and frontend)
 	@echo "$(GREEN)→ Formatting backend (ruff)…$(RESET)"
-	ruff format .
+	$(RUFF) format .
 	@echo "$(GREEN)→ Formatting frontend (prettier)…$(RESET)"
 	cd dashboard && $(BUN) run format:check 2>/dev/null || $(BUN) run format 2>/dev/null || $(NPM) run format
 
 .PHONY: test
-test: ## Run backend tests
+test: venv ## Run backend tests
 	@echo "$(GREEN)→ Running backend tests (pytest)…$(RESET)"
-	pytest
+	$(PYTEST)

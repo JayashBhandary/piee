@@ -50,7 +50,6 @@ PIEE is a unified AI infrastructure platform designed for dual deployment — ru
 The easiest way to run the full stack (API + Dashboard) is using Docker Compose:
 
 ```bash
-cd PIEE
 cp .env.example .env
 make docker-up
 ```
@@ -62,7 +61,6 @@ Access the dashboard at `http://localhost:3000` and the API at `http://localhost
 You can run the stack locally using the provided `Makefile`:
 
 ```bash
-cd PIEE
 cp .env.example .env
 make setup   # Creates .env, Python .venv, installs Node deps, sets up DB
 make dev     # Starts both API (8000) and Dashboard (3000) in parallel

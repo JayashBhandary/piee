@@ -25,9 +25,7 @@ class BillingService:
             db = Prisma()
             await db.connect()
             try:
-                wallet = await db.creditwallet.find_unique(
-                    where={"userId": user_id}
-                )
+                wallet = await db.creditwallet.find_unique(where={"userId": user_id})
                 if wallet:
                     return {
                         "balance": wallet.balance,
@@ -61,9 +59,7 @@ class BillingService:
             db = Prisma()
             await db.connect()
             try:
-                wallet = await db.creditwallet.find_unique(
-                    where={"userId": user_id}
-                )
+                wallet = await db.creditwallet.find_unique(where={"userId": user_id})
                 if not wallet:
                     wallet = await db.creditwallet.create(
                         data={"userId": user_id, "balance": 0}
@@ -97,7 +93,9 @@ class BillingService:
 
     @staticmethod
     async def add_credits(
-        user_id: str, amount: float, transaction_type: str = "topup",
+        user_id: str,
+        amount: float,
+        transaction_type: str = "topup",
         description: Optional[str] = None,
     ) -> bool:
         """Add credits to wallet."""
@@ -107,9 +105,7 @@ class BillingService:
             db = Prisma()
             await db.connect()
             try:
-                wallet = await db.creditwallet.find_unique(
-                    where={"userId": user_id}
-                )
+                wallet = await db.creditwallet.find_unique(where={"userId": user_id})
                 if not wallet:
                     wallet = await db.creditwallet.create(
                         data={"userId": user_id, "balance": 0}
@@ -145,9 +141,7 @@ class BillingService:
             db = Prisma()
             await db.connect()
             try:
-                wallet = await db.creditwallet.find_unique(
-                    where={"userId": user_id}
-                )
+                wallet = await db.creditwallet.find_unique(where={"userId": user_id})
                 if not wallet:
                     return []
 

@@ -90,6 +90,7 @@ async def create_embedding(
     # Log usage
     try:
         from app.audit.service import AuditService
+
         await AuditService.log_usage(
             user_id=user.id,
             model_id=body.model,

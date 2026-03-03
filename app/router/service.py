@@ -183,7 +183,9 @@ class ModelRegistryService:
         return [
             ModelInfoResponse(
                 id=r.modelId,
-                created=int(r.createdAt.timestamp()) if r.createdAt else int(time.time()),
+                created=int(r.createdAt.timestamp())
+                if r.createdAt
+                else int(time.time()),
                 owned_by=r.provider,
             )
             for r in records

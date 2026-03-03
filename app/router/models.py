@@ -21,14 +21,18 @@ class RoutingMode(str, Enum):
 
 class RoutingRequest(BaseModel):
     """Incoming routing request."""
+
     model: str = Field(..., description="Model identifier (e.g., 'openai/gpt-4o')")
-    request_type: str = Field(default="chat", description="chat | embedding | completion")
+    request_type: str = Field(
+        default="chat", description="chat | embedding | completion"
+    )
     preferred_mode: Optional[RoutingMode] = None
     user_id: Optional[str] = None
 
 
 class RoutingDecision(BaseModel):
     """Result of a routing decision."""
+
     model_id: str
     provider_name: str
     routing_mode: RoutingMode
@@ -38,6 +42,7 @@ class RoutingDecision(BaseModel):
 
 class ModelInfoResponse(BaseModel):
     """Model info for API responses (OpenAI-compatible)."""
+
     id: str
     object: str = "model"
     created: int
@@ -49,6 +54,7 @@ class ModelInfoResponse(BaseModel):
 
 class ModelRegistryEntry(BaseModel):
     """Full model registry entry for admin views."""
+
     id: str
     model_id: str
     display_name: str
@@ -70,6 +76,7 @@ class ModelRegistryEntry(BaseModel):
 
 class ModelRegistryCreate(BaseModel):
     """Create a new model registry entry."""
+
     model_id: str
     display_name: str
     provider: str
@@ -85,6 +92,7 @@ class ModelRegistryCreate(BaseModel):
 
 class ModelRegistryUpdate(BaseModel):
     """Update an existing model registry entry."""
+
     display_name: Optional[str] = None
     routing_mode: Optional[str] = None
     capabilities: Optional[List[str]] = None

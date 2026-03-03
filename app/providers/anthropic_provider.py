@@ -38,12 +38,18 @@ class AnthropicProvider(BaseProvider):
 
     # Anthropic models and capabilities
     KNOWN_MODELS = [
-        {"id": "claude-3-5-sonnet-20241022", "name": "Claude 3.5 Sonnet", "ctx": 200000},
+        {
+            "id": "claude-3-5-sonnet-20241022",
+            "name": "Claude 3.5 Sonnet",
+            "ctx": 200000,
+        },
         {"id": "claude-3-5-haiku-20241022", "name": "Claude 3.5 Haiku", "ctx": 200000},
         {"id": "claude-3-opus-20240229", "name": "Claude 3 Opus", "ctx": 200000},
     ]
 
-    def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None, **kwargs):
+    def __init__(
+        self, api_key: Optional[str] = None, base_url: Optional[str] = None, **kwargs
+    ):
         super().__init__(api_key=api_key, base_url=base_url, **kwargs)
         self.base_url = base_url or "https://api.anthropic.com"
         self._client: Optional[httpx.AsyncClient] = None
@@ -61,7 +67,9 @@ class AnthropicProvider(BaseProvider):
             )
         return self._client
 
-    def _translate_messages(self, messages: List[ChatMessage]) -> tuple[Optional[str], List[dict]]:
+    def _translate_messages(
+        self, messages: List[ChatMessage]
+    ) -> tuple[Optional[str], List[dict]]:
         """Separate system prompt from messages (Anthropic treats system separately)."""
         system_prompt = None
         anthropic_messages = []
@@ -70,14 +78,20 @@ class AnthropicProvider(BaseProvider):
             if msg.role == "system":
                 system_prompt = msg.content
             else:
-                anthropic_messages.append({
-                    "role": msg.role if msg.role in ("user", "assistant") else "user",
-                    "content": msg.content or "",
-                })
+                anthropic_messages.append(
+                    {
+                        "role": msg.role
+                        if msg.role in ("user", "assistant")
+                        else "user",
+                        "content": msg.content or "",
+                    }
+                )
 
         return system_prompt, anthropic_messages
 
-    async def chat_completion(self, request: ChatCompletionRequest) -> ChatCompletionResponse:
+    async def chat_completion(
+        self, request: ChatCompletionRequest
+    ) -> ChatCompletionResponse:
         client = self._get_client()
         system_prompt, messages = self._translate_messages(request.messages)
 
@@ -102,7 +116,9 @@ class AnthropicProvider(BaseProvider):
         # Translate Anthropic response → OpenAI format
         content_blocks = data.get("content", [])
         text_content = " ".join(
-            block.get("text", "") for block in content_blocks if block.get("type") == "text"
+            block.get("text", "")
+            for block in content_blocks
+            if block.get("type") == "text"
         )
 
         usage = data.get("usage", {})
@@ -115,13 +131,16 @@ class AnthropicProvider(BaseProvider):
                 ChatCompletionChoice(
                     index=0,
                     message=ChatMessage(role="assistant", content=text_content),
-                    finish_reason=self._map_stop_reason(data.get("stop_reason", "end_turn")),
+                    finish_reason=self._map_stop_reason(
+                        data.get("stop_reason", "end_turn")
+                    ),
                 )
             ],
             usage=UsageInfo(
                 prompt_tokens=usage.get("input_tokens", 0),
                 completion_tokens=usage.get("output_tokens", 0),
-                total_tokens=usage.get("input_tokens", 0) + usage.get("output_tokens", 0),
+                total_tokens=usage.get("input_tokens", 0)
+                + usage.get("output_tokens", 0),
             ),
         )
 
@@ -164,7 +183,9 @@ class AnthropicProvider(BaseProvider):
                                 choices=[
                                     StreamChoice(
                                         index=0,
-                                        delta=StreamDelta(content=delta.get("text", "")),
+                                        delta=StreamDelta(
+                                            content=delta.get("text", "")
+                                        ),
                                         finish_reason=None,
                                     )
                                 ],

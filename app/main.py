@@ -33,6 +33,7 @@ async def lifespan(app: FastAPI):
 
         # Seed default models
         from app.router.service import ModelRegistryService
+
         seeded = await ModelRegistryService.seed_defaults(db)
         if seeded > 0:
             logger.info(f"📦 Seeded {seeded} default models into registry")
@@ -78,7 +79,9 @@ def create_app() -> FastAPI:
     # ── CORS ────────────────────────────────────
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"] if settings.is_local else [
+        allow_origins=["*"]
+        if settings.is_local
+        else [
             "https://piee.app",
             "https://dashboard.piee.app",
         ],
@@ -89,6 +92,7 @@ def create_app() -> FastAPI:
 
     # ── Request Logging Middleware ──────────────
     from app.audit.middleware import RequestLoggingMiddleware
+
     app.add_middleware(RequestLoggingMiddleware)
 
     # ── Routers ─────────────────────────────────

@@ -14,6 +14,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 # ── Requests ───────────────────────────────────
 
+
 class UserCreate(BaseModel):
     email: str = Field(..., description="User email address")
     password: str = Field(..., min_length=8, description="Password (min 8 chars)")
@@ -27,11 +28,14 @@ class UserLogin(BaseModel):
 
 class ApiKeyCreate(BaseModel):
     name: str = Field(..., description="Friendly name for the API key")
-    permissions: List[str] = Field(default=["all"], description="Allowed permission scopes")
+    permissions: List[str] = Field(
+        default=["all"], description="Allowed permission scopes"
+    )
     expires_in_days: Optional[int] = Field(None, description="Expiry in days from now")
 
 
 # ── Responses ──────────────────────────────────
+
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -67,6 +71,7 @@ class ApiKeyResponse(BaseModel):
 
 class ApiKeyCreated(BaseModel):
     """Returned only on creation — includes the full key (shown once)."""
+
     id: str
     name: str
     key: str  # Full API key — ONLY shown at creation time

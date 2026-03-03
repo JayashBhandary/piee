@@ -52,9 +52,8 @@ class AuditService:
                 if model_record:
                     model_registry_id = model_record.id
                     # Calculate cost: price per million tokens
-                    cost = (
-                        (input_tokens * model_record.inputPricePerM / 1_000_000)
-                        + (output_tokens * model_record.outputPricePerM / 1_000_000)
+                    cost = (input_tokens * model_record.inputPricePerM / 1_000_000) + (
+                        output_tokens * model_record.outputPricePerM / 1_000_000
                     )
 
                 if model_registry_id:
@@ -75,9 +74,11 @@ class AuditService:
 
                 # Deduct credits if billing is enabled
                 from app.flags.service import FeatureFlagService
+
                 flag_service = FeatureFlagService(settings)
                 if await flag_service.is_enabled("billing_enabled") and cost > 0:
                     from app.billing.service import BillingService
+
                     await BillingService.deduct_credits(
                         user_id=user_id, amount=cost, reference_id=model_id
                     )
@@ -143,4 +144,9 @@ class AuditService:
             finally:
                 await db.disconnect()
         except Exception:
-            return {"total_requests": 0, "total_tokens": 0, "total_cost": 0, "records": []}
+            return {
+                "total_requests": 0,
+                "total_tokens": 0,
+                "total_cost": 0,
+                "records": [],
+            }

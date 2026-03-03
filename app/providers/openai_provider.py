@@ -36,7 +36,9 @@ class OpenAIProvider(BaseProvider):
 
     provider_name = "openai"
 
-    def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None, **kwargs):
+    def __init__(
+        self, api_key: Optional[str] = None, base_url: Optional[str] = None, **kwargs
+    ):
         super().__init__(api_key=api_key, base_url=base_url, **kwargs)
         self.base_url = base_url or "https://api.openai.com/v1"
         self._client: Optional[httpx.AsyncClient] = None
@@ -71,7 +73,9 @@ class OpenAIProvider(BaseProvider):
             payload["frequency_penalty"] = request.frequency_penalty
         return payload
 
-    async def chat_completion(self, request: ChatCompletionRequest) -> ChatCompletionResponse:
+    async def chat_completion(
+        self, request: ChatCompletionRequest
+    ) -> ChatCompletionResponse:
         client = self._get_client()
         payload = self._build_payload(request)
         payload["stream"] = False

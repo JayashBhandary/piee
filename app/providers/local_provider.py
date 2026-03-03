@@ -58,7 +58,9 @@ class LocalProvider(BaseProvider):
             )
         return self._client
 
-    async def chat_completion(self, request: ChatCompletionRequest) -> ChatCompletionResponse:
+    async def chat_completion(
+        self, request: ChatCompletionRequest
+    ) -> ChatCompletionResponse:
         client = self._get_client()
 
         # Ollama's OpenAI-compatible endpoint
@@ -120,7 +122,8 @@ class LocalProvider(BaseProvider):
                 usage=UsageInfo(
                     prompt_tokens=data.get("prompt_eval_count", 0),
                     completion_tokens=data.get("eval_count", 0),
-                    total_tokens=data.get("prompt_eval_count", 0) + data.get("eval_count", 0),
+                    total_tokens=data.get("prompt_eval_count", 0)
+                    + data.get("eval_count", 0),
                 ),
             )
 
@@ -182,19 +185,22 @@ class LocalProvider(BaseProvider):
             )
         except httpx.HTTPStatusError:
             # Fallback to Ollama native embedding endpoint
-            input_text = request.input if isinstance(request.input, str) else request.input[0]
-            resp = await client.post("/api/embeddings", json={
-                "model": request.model.split("/")[-1],
-                "prompt": input_text,
-            })
+            input_text = (
+                request.input if isinstance(request.input, str) else request.input[0]
+            )
+            resp = await client.post(
+                "/api/embeddings",
+                json={
+                    "model": request.model.split("/")[-1],
+                    "prompt": input_text,
+                },
+            )
             resp.raise_for_status()
             data = resp.json()
 
             return EmbeddingResponse(
                 model=request.model,
-                data=[
-                    EmbeddingData(index=0, embedding=data.get("embedding", []))
-                ],
+                data=[EmbeddingData(index=0, embedding=data.get("embedding", []))],
                 usage=UsageInfo(prompt_tokens=0, completion_tokens=0, total_tokens=0),
             )
 

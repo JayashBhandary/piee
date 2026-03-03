@@ -51,6 +51,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         if self._is_audit_worthy(method, path):
             try:
                 from app.audit.service import AuditService
+
                 await AuditService.log_audit(
                     action=f"{method.lower()}.{path.strip('/').replace('/', '.')}",
                     ip_address=client_ip,

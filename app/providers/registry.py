@@ -69,9 +69,7 @@ class ProviderRegistry:
             db = Prisma()
             await db.connect()
             try:
-                configs = await db.providerconfig.find_many(
-                    where={"isActive": True}
-                )
+                configs = await db.providerconfig.find_many(where={"isActive": True})
                 auth_service = AuthService(self.settings)
 
                 for config in configs:

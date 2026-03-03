@@ -27,5 +27,6 @@ class FeatureFlagUpdate(BaseModel):
 
 class FeatureFlagBulk(BaseModel):
     """Bulk response for all feature flags."""
+
     flags: dict[str, bool]
     deployment_mode: str

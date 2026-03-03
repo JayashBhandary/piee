@@ -15,8 +15,10 @@ from pydantic import BaseModel
 
 # ── Shared Types ───────────────────────────────
 
+
 class ProviderModelInfo(BaseModel):
     """Minimal model info returned by a provider."""
+
     id: str
     name: str
     provider: str
@@ -106,6 +108,7 @@ class EmbeddingResponse(BaseModel):
 
 # ── Abstract Base Provider ─────────────────────
 
+
 class BaseProvider(ABC):
     """
     Interface contract for all provider adapters.
@@ -117,7 +120,9 @@ class BaseProvider(ABC):
 
     provider_name: str = "base"
 
-    def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None, **kwargs):
+    def __init__(
+        self, api_key: Optional[str] = None, base_url: Optional[str] = None, **kwargs
+    ):
         self.api_key = api_key
         self.base_url = base_url
         self._config = kwargs

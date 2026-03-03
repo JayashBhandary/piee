@@ -31,7 +31,10 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 # ── Register ───────────────────────────────────
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+)
 async def register(
     body: UserCreate,
     db: Prisma = Depends(get_db),
@@ -67,6 +70,7 @@ async def register(
 
 # ── Login ──────────────────────────────────────
 
+
 @router.post("/login", response_model=TokenResponse)
 async def login(
     body: UserLogin,
@@ -93,6 +97,7 @@ async def login(
 
 # ── Me ─────────────────────────────────────────
 
+
 @router.get("/me", response_model=UserResponse)
 async def get_me(user=Depends(get_current_user)):
     """Get the currently authenticated user."""
@@ -108,7 +113,10 @@ async def get_me(user=Depends(get_current_user)):
 
 # ── API Keys ──────────────────────────────────
 
-@router.post("/api-keys", response_model=ApiKeyCreated, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/api-keys", response_model=ApiKeyCreated, status_code=status.HTTP_201_CREATED
+)
 async def create_api_key(
     body: ApiKeyCreate,
     user=Depends(get_current_user),

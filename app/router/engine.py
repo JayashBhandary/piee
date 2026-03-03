@@ -43,7 +43,9 @@ class RouterEngine:
         self.settings = settings
         self.provider_registry = provider_registry
 
-    async def route(self, request: RoutingRequest) -> tuple[BaseProvider, RoutingDecision]:
+    async def route(
+        self, request: RoutingRequest
+    ) -> tuple[BaseProvider, RoutingDecision]:
         """
         Resolve a routing request to a provider + decision.
 
@@ -78,7 +80,9 @@ class RouterEngine:
             f"Available providers: {self.provider_registry.list_providers()}"
         )
 
-    async def _resolve_from_registry(self, request: RoutingRequest) -> Optional[RoutingDecision]:
+    async def _resolve_from_registry(
+        self, request: RoutingRequest
+    ) -> Optional[RoutingDecision]:
         """Look up the model in ModelRegistry DB."""
         try:
             from prisma import Prisma
@@ -95,9 +99,12 @@ class RouterEngine:
                 # Check premium gating
                 if record.isPremium:
                     from app.flags.service import FeatureFlagService
+
                     flag_service = FeatureFlagService(self.settings)
                     if not await flag_service.is_enabled("premium_models_enabled"):
-                        logger.warning(f"Premium model '{request.model}' blocked by feature flag")
+                        logger.warning(
+                            f"Premium model '{request.model}' blocked by feature flag"
+                        )
                         return None
 
                 # Determine routing mode
@@ -125,7 +132,9 @@ class RouterEngine:
             logger.debug(f"Registry lookup failed: {e}")
             return None
 
-    def _resolve_from_model_id(self, request: RoutingRequest) -> Optional[RoutingDecision]:
+    def _resolve_from_model_id(
+        self, request: RoutingRequest
+    ) -> Optional[RoutingDecision]:
         """Parse provider from model ID format: 'provider/model-name'."""
         if "/" not in request.model:
             # Try all available providers
@@ -146,7 +155,9 @@ class RouterEngine:
         if not self.provider_registry.is_available(provider_name):
             return None
 
-        routing_mode = RoutingMode.LOCAL if provider_name == "local" else RoutingMode.REMOTE
+        routing_mode = (
+            RoutingMode.LOCAL if provider_name == "local" else RoutingMode.REMOTE
+        )
         if request.preferred_mode:
             routing_mode = request.preferred_mode
 
@@ -157,7 +168,9 @@ class RouterEngine:
             resolved_model=model_name,
         )
 
-    async def _resolve_fallback(self, request: RoutingRequest) -> Optional[tuple[BaseProvider, RoutingDecision]]:
+    async def _resolve_fallback(
+        self, request: RoutingRequest
+    ) -> Optional[tuple[BaseProvider, RoutingDecision]]:
         """Try fallback providers if the primary one is unavailable."""
         try:
             from prisma import Prisma
@@ -199,9 +212,7 @@ class RouterEngine:
         while current_id and current_id not in visited:
             visited.add(current_id)
             chain.append(current_id)
-            record = await db.modelregistry.find_unique(
-                where={"modelId": current_id}
-            )
+            record = await db.modelregistry.find_unique(where={"modelId": current_id})
             if record and record.fallbackModelId:
                 current_id = record.fallbackModelId
             else:
@@ -209,9 +220,7 @@ class RouterEngine:
 
         return chain
 
-    async def execute_with_fallback(
-        self, request: RoutingRequest, execute_fn
-    ):
+    async def execute_with_fallback(self, request: RoutingRequest, execute_fn):
         """
         Execute a request with automatic fallback on failure.
 
@@ -237,7 +246,9 @@ class RouterEngine:
                     fb_provider, fb_decision = await self.route(fallback_request)
                     return await execute_fn(fb_provider, fb_decision.resolved_model)
                 except Exception as fb_error:
-                    logger.warning(f"Fallback '{fallback_model_id}' also failed: {fb_error}")
+                    logger.warning(
+                        f"Fallback '{fallback_model_id}' also failed: {fb_error}"
+                    )
                     continue
 
             raise primary_error  # All fallbacks exhausted

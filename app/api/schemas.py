@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 
 # ── Chat Completions ───────────────────────────
 
+
 class ChatMessageSchema(BaseModel):
     role: str = Field(..., description="system | user | assistant | tool")
     content: Optional[Union[str, List[Dict[str, Any]]]] = None
@@ -60,6 +61,7 @@ class ChatCompletionResponseSchema(BaseModel):
 
 # ── Streaming ──────────────────────────────────
 
+
 class DeltaSchema(BaseModel):
     role: Optional[str] = None
     content: Optional[str] = None
@@ -80,6 +82,7 @@ class ChatCompletionChunkSchema(BaseModel):
 
 
 # ── Embeddings ─────────────────────────────────
+
 
 class EmbeddingRequestSchema(BaseModel):
     model: str = Field(..., description="Model identifier for embeddings")
@@ -102,6 +105,7 @@ class EmbeddingResponseSchema(BaseModel):
 
 
 # ── Models ─────────────────────────────────────
+
 
 class ModelSchema(BaseModel):
     id: str

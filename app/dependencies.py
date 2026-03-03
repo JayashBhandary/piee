@@ -22,6 +22,7 @@ api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 # ── Database ───────────────────────────────────
 
+
 async def get_db():
     """Yield a Prisma client instance."""
     from prisma import Prisma
@@ -35,6 +36,7 @@ async def get_db():
 
 
 # ── Authentication ─────────────────────────────
+
 
 async def get_current_user(
     bearer: Optional[HTTPAuthorizationCredentials] = Security(bearer_scheme),
@@ -92,6 +94,7 @@ async def get_optional_user(
 
 # ── Feature Flags ──────────────────────────────
 
+
 async def require_feature(flag_key: str):
     """
     Factory for feature-flag dependency.
@@ -114,6 +117,7 @@ async def require_feature(flag_key: str):
 
 
 # ── Role Checking ──────────────────────────────
+
 
 def require_role(required_role: str):
     """

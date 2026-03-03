@@ -46,6 +46,7 @@ install: install-api install-dashboard ## Install all dependencies
 install-api: ## Install backend dependencies
 	@echo "$(GREEN)→ Installing backend dependencies…$(RESET)"
 	$(PIP) install -r requirements.txt
+	$(PIP) install -r requirements-dev.txt
 
 .PHONY: install-dashboard
 install-dashboard: ## Install dashboard dependencies

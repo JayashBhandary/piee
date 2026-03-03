@@ -65,7 +65,11 @@ async def chat_completions(
         messages=[
             ChatMessage(
                 role=m.role,
-                content=m.content if isinstance(m.content, str) else json.dumps(m.content) if m.content else None,
+                content=m.content
+                if isinstance(m.content, str)
+                else json.dumps(m.content)
+                if m.content
+                else None,
                 name=m.name,
                 tool_calls=m.tool_calls,
                 tool_call_id=m.tool_call_id,
@@ -76,7 +80,11 @@ async def chat_completions(
         top_p=body.top_p,
         max_tokens=body.max_tokens,
         stream=body.stream or False,
-        stop=body.stop if isinstance(body.stop, list) else [body.stop] if body.stop else None,
+        stop=body.stop
+        if isinstance(body.stop, list)
+        else [body.stop]
+        if body.stop
+        else None,
         presence_penalty=body.presence_penalty,
         frequency_penalty=body.frequency_penalty,
         user=body.user,
@@ -100,7 +108,14 @@ async def chat_completions(
     # Handle streaming
     if body.stream:
         return StreamingResponse(
-            _stream_response(provider, provider_request, user.id, decision.resolved_model, settings, start_time),
+            _stream_response(
+                provider,
+                provider_request,
+                user.id,
+                decision.resolved_model,
+                settings,
+                start_time,
+            ),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
@@ -139,7 +154,9 @@ async def chat_completions(
         choices=[
             ChatChoiceSchema(
                 index=c.index,
-                message=ChatMessageSchema(role=c.message.role, content=c.message.content),
+                message=ChatMessageSchema(
+                    role=c.message.role, content=c.message.content
+                ),
                 finish_reason=c.finish_reason,
             )
             for c in result.choices
@@ -152,7 +169,9 @@ async def chat_completions(
     )
 
 
-async def _stream_response(provider, request, user_id, resolved_model, settings, start_time):
+async def _stream_response(
+    provider, request, user_id, resolved_model, settings, start_time
+):
     """Generate SSE stream from provider."""
     total_tokens = 0
     try:
@@ -180,13 +199,18 @@ async def _stream_response(provider, request, user_id, resolved_model, settings,
 
 
 async def _log_usage(
-    user_id: str, model_id: str, request_type: str,
-    input_tokens: int, output_tokens: int, latency_ms: int,
+    user_id: str,
+    model_id: str,
+    request_type: str,
+    input_tokens: int,
+    output_tokens: int,
+    latency_ms: int,
     settings: Settings,
 ):
     """Log usage asynchronously (best effort)."""
     try:
         from app.audit.service import AuditService
+
         await AuditService.log_usage(
             user_id=user_id,
             model_id=model_id,

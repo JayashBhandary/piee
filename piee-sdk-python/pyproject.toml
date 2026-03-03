@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "piee"
+version = "0.1.0"
+description = "PIEE — Unified AI Infrastructure SDK. Works with both local and cloud deployments."
+readme = "README.md"
+authors = [
+    { name = "PIEE", email = "hello@piee.app" }
+]
+license = "MIT"
+requires-python = ">=3.8"
+dependencies = [
+    "httpx>=0.25.0",
+    "pydantic>=2.0.0"
+]
+keywords = ["piee", "ai", "openai", "llm", "sdk", "infrastructure"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "respx>=0.20.0"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["piee"]

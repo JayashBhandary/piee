@@ -1,0 +1,19 @@
+{
+    "name": "test-sdk-typescript",
+    "version": "1.0.0",
+    "description": "Test project for the PIEE TypeScript SDK",
+    "main": "test.js",
+    "scripts": {
+        "test": "ts-node test.ts"
+    },
+    "dependencies": {
+        "@piee/sdk": "file:../sdk"
+    },
+    "devDependencies": {
+        "ts-node": "^10.9.1",
+        "typescript": "^5.3.2",
+        "@types/node": "^20.10.0"
+    },
+    "author": "",
+    "license": "ISC"
+}

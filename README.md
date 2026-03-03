@@ -63,8 +63,17 @@ You can run the stack locally using the provided `Makefile`:
 
 ```bash
 cd PIEE
+cp .env.example .env
 make setup   # Creates .env, installs Python/Node dependencies, sets up DB
 make dev     # Starts both API (8000) and Dashboard (3000) in parallel
+```
+
+### Code Quality & Testing
+You can run the new industry standard tooling with the following commands:
+```bash
+make format  # Automatically formats both backend (Ruff) and frontend (Prettier)
+make lint    # Runs linters (Ruff, ESLint, Mypy check)
+make test    # Runs the Pytest suite for the backend
 ```
 
 *Run `make help` to see all available commands.*

@@ -166,3 +166,26 @@ clean-all: clean ## Deep clean (includes node_modules, venv)
 	rm -rf .venv venv
 	$(DOCKER) down -v --rmi local 2>/dev/null || true
 	@echo "$(GREEN)✓ Deep clean complete$(RESET)"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Code Quality & Testing
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+.PHONY: lint
+lint: ## Run linters (backend and frontend)
+	@echo "$(GREEN)→ Linting backend (ruff)…$(RESET)"
+	ruff check .
+	@echo "$(GREEN)→ Linting frontend (eslint)…$(RESET)"
+	cd dashboard && $(BUN) run lint 2>/dev/null || $(NPM) run lint
+
+.PHONY: format
+format: ## Run formatters (backend and frontend)
+	@echo "$(GREEN)→ Formatting backend (ruff)…$(RESET)"
+	ruff format .
+	@echo "$(GREEN)→ Formatting frontend (prettier)…$(RESET)"
+	cd dashboard && $(BUN) run format:check 2>/dev/null || $(BUN) run format 2>/dev/null || $(NPM) run format
+
+.PHONY: test
+test: ## Run backend tests
+	@echo "$(GREEN)→ Running backend tests (pytest)…$(RESET)"
+	pytest

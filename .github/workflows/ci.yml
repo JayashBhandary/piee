@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+          
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          
+      - name: Generate Prisma Client
+        run: python -m prisma generate
+          
+      - name: Ruff Check
+        run: ruff check .
+        
+      - name: Ruff Format Check
+        run: ruff format --check .
+        
+      - name: Mypy Check
+        run: mypy app/
+        
+      - name: Run Tests
+        run: pytest
+
+  frontend-checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./dashboard
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+      
+      - name: Install Dependencies
+        run: bun install
+        
+      - name: Run ESLint
+        run: bun lint
+        
+      - name: Check Prettier Formatting
+        run: bun run format:check

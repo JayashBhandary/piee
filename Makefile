@@ -121,7 +121,7 @@ dev-dashboard: ## Start dashboard (port $(DASH_PORT))
 	cd dashboard && $(BUN) run dev 2>/dev/null || $(NPM) run dev
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Build
+# Build & Run (Production)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 .PHONY: build
@@ -131,6 +131,19 @@ build: build-dashboard ## Build all artifacts
 build-dashboard: ## Build dashboard for production
 	@echo "$(GREEN)→ Building dashboard…$(RESET)"
 	cd dashboard && $(BUN) run build 2>/dev/null || $(NPM) run build
+
+.PHONY: start
+start: build ## Build and start both API and Dashboard
+	@echo "$(GREEN)→ Starting PIEE (Production Mode)…$(RESET)"
+	@$(MAKE) -j2 start-api start-dashboard
+
+.PHONY: start-api
+start-api: ## Start backend for production
+	$(UVICORN) app.main:app --host 0.0.0.0 --port $(API_PORT)
+
+.PHONY: start-dashboard
+start-dashboard: ## Start built dashboard
+	cd dashboard && $(BUN) run start 2>/dev/null || $(NPM) run start
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Docker

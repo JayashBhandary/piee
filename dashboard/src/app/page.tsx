@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -69,6 +69,9 @@ import {
   ChevronDown,
   Terminal,
   Sparkles,
+  Beaker,
+  Send,
+  MessageSquare,
 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -227,6 +230,7 @@ function DashboardShell({ user, onLogout }: ShellProps) {
 
   const nav = [
     { id: "overview", icon: LayoutDashboard, label: "Overview" },
+    { id: "sandbox", icon: Beaker, label: "Sandbox" },
     { id: "models", icon: Bot, label: "Models" },
     { id: "keys", icon: Key, label: "API Keys" },
     { id: "usage", icon: BarChart3, label: "Usage" },
@@ -257,11 +261,10 @@ function DashboardShell({ user, onLogout }: ShellProps) {
               <button
                 key={item.id}
                 onClick={() => setPage(item.id)}
-                className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-md text-sm transition-colors ${
-                  page === item.id
-                    ? "bg-primary text-primary-foreground font-medium"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                }`}
+                className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-md text-sm transition-colors ${page === item.id
+                  ? "bg-primary text-primary-foreground font-medium"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  }`}
               >
                 <item.icon className="h-4 w-4" />
                 {item.label}
@@ -322,6 +325,7 @@ function DashboardShell({ user, onLogout }: ShellProps) {
 
         <div className="p-6 md:p-8 max-w-6xl mx-auto">
           {page === "overview" && <OverviewPage />}
+          {page === "sandbox" && <SandboxPage />}
           {page === "models" && <ModelsPage />}
           {page === "keys" && <ApiKeysPage />}
           {page === "usage" && <UsagePage />}
@@ -344,14 +348,14 @@ function OverviewPage() {
     fetch(`${API_URL}/health`)
       .then((r) => r.json())
       .then(setHealth)
-      .catch(() => {});
+      .catch(() => { });
     fetch(`${API_URL}/v1/models`)
       .then((r) => r.json())
       .then((d) => setModelCount(d.data?.length || 0))
-      .catch(() => {});
+      .catch(() => { });
     apiRequest("GET", "/billing/balance")
       .then(setBalance)
-      .catch(() => {});
+      .catch(() => { });
   }, [apiRequest]);
 
   return (
@@ -456,11 +460,204 @@ function StatCard({
 
 /* ━━━ Models ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 
+function OllamaControls({ onSync }: { onSync: () => void }) {
+  const { apiRequest } = useAuth();
+  const [status, setStatus] = useState<any>(null);
+  const [localModels, setLocalModels] = useState<any[]>([]);
+  const [pullName, setPullName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [pulling, setPulling] = useState(false);
+
+  const checkStatus = async () => {
+    try {
+      const res: any = await apiRequest("GET", "/v1/ollama/status");
+      setStatus(res);
+      if (res.status === "online") loadLocalModels();
+    } catch {
+      setStatus({ status: "offline", message: "Failed to connect to PIEE backend" });
+    }
+  };
+
+  const loadLocalModels = async () => {
+    setLoading(true);
+    try {
+      const res: any = await apiRequest("GET", "/v1/ollama/models");
+      if (res.status === "success") {
+        setLocalModels(res.models);
+      }
+    } catch {}
+    setLoading(false);
+  };
+
+  const [pullProgress, setPullProgress] = useState<string>("");
+
+  const pullModel = async () => {
+    if (!pullName) return;
+    setPulling(true);
+    setPullProgress("Starting pull...");
+    try {
+      const currentToken = typeof window !== "undefined" ? localStorage.getItem("piee_token") : null;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (currentToken) headers["Authorization"] = `Bearer ${currentToken}`;
+
+      const res = await fetch(`${API_URL}/v1/ollama/pull`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ name: pullName })
+      });
+
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      if (!res.body) throw new Error("No response body");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n').filter(Boolean);
+        for (const line of lines) {
+           try {
+             const data = JSON.parse(line);
+             let progStr = data.status || "";
+             if (data.total && data.completed) {
+               const pct = Math.round((data.completed / data.total) * 100);
+               progStr += ` (${pct}%)`;
+             }
+             if (data.error) {
+               progStr = `Error: ${data.error}`;
+             }
+             setPullProgress(progStr);
+           } catch {
+             // pass
+           }
+        }
+      }
+
+      setPullProgress("Pull complete!");
+      setTimeout(() => setPullProgress(""), 3000);
+      loadLocalModels();
+      setPullName("");
+    } catch (e: any) {
+      alert("Pull failed: " + e.message);
+      setPullProgress("");
+    }
+    setPulling(false);
+  };
+
+  const syncModel = async (name: string) => {
+    try {
+      await apiRequest("POST", "/v1/ollama/sync", { name });
+      onSync();
+    } catch (e: any) {
+      alert("Sync failed: " + e.message);
+    }
+  };
+
+  useEffect(() => {
+    checkStatus();
+  }, []);
+
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Server className="h-5 w-5" />
+          Ollama Provider
+        </CardTitle>
+        <CardDescription>
+          Manage your local Ollama daemon directly
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm">
+            Status:
+            {status?.status === "online" ? (
+              <Badge variant="secondary" className="bg-green-500/10 text-green-500 hover:bg-green-500/20">Online</Badge>
+            ) : (
+              <Badge variant="destructive">Offline</Badge>
+            )}
+            <span className="text-xs text-muted-foreground">{status?.message || "Checking..."}</span>
+          </div>
+          <Button variant="outline" size="sm" onClick={checkStatus}>
+            Refresh
+          </Button>
+        </div>
+        
+        {status?.status === "online" && (
+          <>
+            <Separator />
+            <div className="flex items-end gap-3">
+              <div className="flex-1 space-y-2">
+                <Label>Pull New Model</Label>
+                <Input 
+                  placeholder="e.g. llama3, qwen2.5:0.5b..." 
+                  value={pullName} 
+                  onChange={e => setPullName(e.target.value)} 
+                  disabled={pulling}
+                />
+              </div>
+              <Button onClick={pullModel} disabled={pulling || !pullName}>
+                {pulling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {pulling ? "Pulling..." : "Pull Model"}
+              </Button>
+            </div>
+            {pullProgress && (
+              <p className="text-xs text-muted-foreground animate-pulse">
+                {Math.random() ? pullProgress : pullProgress /* Force text change re-render avoidance hack is not needed, string changes normally */}
+              </p>
+            )}
+            
+            <div className="space-y-2 mt-4">
+              <Label>Installed Models</Label>
+              <div className="border rounded-md overflow-hidden divide-y">
+                {loading ? (
+                   <div className="p-8 text-center text-sm text-muted-foreground">
+                     <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                     Loading local models...
+                   </div>
+                ) : localModels.length === 0 ? (
+                   <div className="p-8 text-center text-sm text-muted-foreground">No local models found. Use the input above to pull one from the Ollama library.</div>
+                ) : (
+                  localModels.map((lm) => (
+                    <div key={lm.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-card gap-3">
+                      <div className="flex items-center gap-3">
+                        <Terminal className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="font-mono text-sm leading-none flex items-center gap-2">
+                            {lm.name}
+                            <Badge variant="outline" className="text-[10px] h-5 px-1.5">{Math.round(lm.size / 1024 / 1024 / 1024 * 10) / 10} GB</Badge>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                         <div className="flex items-center gap-1.5 bg-muted/50 px-2.5 py-1 rounded-md text-xs font-mono text-muted-foreground border">
+                           ollama run {lm.name}
+                         </div>
+                         <Button variant="secondary" size="sm" onClick={() => syncModel(lm.name)}>
+                           Sync
+                         </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function ModelsPage() {
   const [models, setModels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadModels = () => {
     fetch(`${API_URL}/v1/models`)
       .then((r) => r.json())
       .then((d) => {
@@ -468,6 +665,10 @@ function ModelsPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadModels();
   }, []);
 
   return (
@@ -481,6 +682,8 @@ function ModelsPage() {
         </div>
         <Badge variant="secondary">{models.length} models</Badge>
       </div>
+
+      <OllamaControls onSync={loadModels} />
 
       <Card>
         <Table>
@@ -560,7 +763,7 @@ function ApiKeysPage() {
     try {
       const data: any = await apiRequest("GET", "/auth/api-keys");
       setKeys(data);
-    } catch {}
+    } catch { }
     setLoading(false);
   };
 
@@ -587,7 +790,7 @@ function ApiKeysPage() {
     try {
       await apiRequest("DELETE", `/auth/api-keys/${id}`);
       loadKeys();
-    } catch {}
+    } catch { }
   };
 
   const copyKey = () => {
@@ -801,7 +1004,7 @@ function UsagePage() {
   useEffect(() => {
     apiRequest("GET", "/audit/usage?limit=50")
       .then(setStats)
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, [apiRequest]);
 
@@ -905,7 +1108,7 @@ function SettingsPage({
     fetch(`${API_URL}/health`)
       .then((r) => r.json())
       .then(setHealth)
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   return (
@@ -1001,6 +1204,197 @@ function Row({
           {value}
         </span>
       )}
+    </div>
+  );
+
+}
+
+/* ━━━ Sandbox ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+function SandboxPage() {
+  const [apiKey, setApiKey] = useState("");
+  const [models, setModels] = useState<any[]>([]);
+  const [selectedModel, setSelectedModel] = useState("");
+  const [messages, setMessages] = useState<{ role: string; content: string }[]>([
+    { role: "system", content: "You are a helpful assistant." },
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch(`${API_URL}/v1/models`)
+      .then(r => r.json())
+      .then(d => {
+        setModels(d.data || []);
+        if (d.data?.length > 0) setSelectedModel(d.data[0].id);
+      })
+      .catch(() => { });
+  }, []);
+
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+    if (!apiKey.trim()) {
+      setError("Please provide an API key");
+      return;
+    }
+    if (!selectedModel) {
+      setError("Please select a model");
+      return;
+    }
+
+    const newMessages = [...messages, { role: "user", content: input }];
+    setMessages(newMessages);
+    setInput("");
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${API_URL}/v1/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: selectedModel,
+          messages: newMessages,
+          stream: false
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error?.message || data.detail || "Request failed");
+      }
+
+      if (data.choices && data.choices[0]?.message) {
+        setMessages([...newMessages, data.choices[0].message]);
+      } else {
+        throw new Error("Invalid response format");
+      }
+    } catch (err: any) {
+      setError(err.message || "An error occurred");
+      setMessages([...newMessages]); // Keep user message
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Sandbox</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Test Chat Completions directly with your API Keys
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 items-start">
+        {/* Left Config */}
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base text-muted-foreground flex items-center gap-2">
+                <Settings className="h-4 w-4" /> Configuration
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="apiKey">API Key</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="apiKey"
+                    type="password"
+                    placeholder="pk-..."
+                    value={apiKey}
+                    onChange={(e) => { setApiKey(e.target.value); setError(""); }}
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground">Required for authentication.</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="modelSelect">Model</Label>
+                <select
+                  id="modelSelect"
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {models.length === 0 && <option value="" disabled>Loading models...</option>}
+                  {models.map(m => (
+                    <option key={m.id} value={m.id}>{m.id}</option>
+                  ))}
+                </select>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Chat Preview */}
+        <Card className="flex flex-col h-[600px] overflow-hidden">
+          <CardHeader className="border-b py-3 px-4 bg-muted/30">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-base font-medium">Chat Preview</CardTitle>
+            </div>
+            {error && (
+              <div className="text-xs text-destructive mt-2 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" /> {error}
+              </div>
+            )}
+          </CardHeader>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {messages.map((m, i) => (
+              <div key={i} className={`flex gap-3 text-sm ${m.role === "user" ? "flex-row-reverse" : ""}`}>
+                <div className={`shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${m.role === "system" ? "bg-muted" : m.role === "user" ? "bg-primary text-primary-foreground" : "bg-blue-500/10 text-blue-500"}`}>
+                  {m.role === "system" ? <Settings className="h-4 w-4" /> : m.role === "user" ? <UserIcon className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+                </div>
+                <div className={`max-w-[75%] px-4 py-2 rounded-2xl ${m.role === "user" ? "bg-primary text-primary-foreground" : m.role === "system" ? "bg-muted text-muted-foreground italic text-xs" : "bg-muted/50 border"}`}>
+                  <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p>
+                </div>
+              </div>
+            ))}
+            {loading && (
+              <div className="flex gap-3 text-sm">
+                <div className="shrink-0 h-8 w-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center">
+                  <Bot className="h-4 w-4" />
+                </div>
+                <div className="px-4 py-2 rounded-2xl bg-muted/50 border flex items-center gap-1 text-muted-foreground">
+                  <span className="h-1.5 w-1.5 rounded-full bg-current animate-bounce" style={{ animationDelay: "0ms" }}></span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-current animate-bounce" style={{ animationDelay: "150ms" }}></span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-current animate-bounce" style={{ animationDelay: "300ms" }}></span>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          <div className="p-4 bg-background border-t mt-auto">
+            <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2">
+              <Input
+                placeholder="Type a message..."
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                disabled={loading}
+                className="flex-1"
+              />
+              <Button type="submit" disabled={loading || !input.trim()}>
+                <Send className="mr-2 h-4 w-4" /> Send
+              </Button>
+            </form>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

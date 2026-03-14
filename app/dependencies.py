@@ -52,9 +52,12 @@ async def get_current_user(
 
     auth_service = AuthService(settings)
 
-    # Try Bearer token first
+    # Try Bearer token first (which could be a JWT or an API Key `pk-...`)
     if bearer and bearer.credentials:
-        user = await auth_service.verify_jwt(bearer.credentials)
+        if bearer.credentials.startswith("pk-"):
+            user = await auth_service.verify_api_key(bearer.credentials)
+        else:
+            user = await auth_service.verify_jwt(bearer.credentials)
         if user:
             return user
 
@@ -82,7 +85,10 @@ async def get_optional_user(
     auth_service = AuthService(settings)
 
     if bearer and bearer.credentials:
-        user = await auth_service.verify_jwt(bearer.credentials)
+        if bearer.credentials.startswith("pk-"):
+            user = await auth_service.verify_api_key(bearer.credentials)
+        else:
+            user = await auth_service.verify_jwt(bearer.credentials)
         if user:
             return user
     if api_key:

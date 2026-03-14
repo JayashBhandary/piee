@@ -1,5 +1,5 @@
 """
-PIEE — Local Provider Adapter (Ollama / Local Inference)
+PIEE — Ollama Provider Adapter (Ollama Inference)
 
 Implements BaseProvider for local inference servers.
 Compatible with Ollama's OpenAI-compatible API.
@@ -31,10 +31,10 @@ from app.providers.base import (
 )
 
 
-class LocalProvider(BaseProvider):
-    """Local inference server adapter (Ollama, vLLM, etc.)."""
+class OllamaProvider(BaseProvider):
+    """Ollama local inference server adapter."""
 
-    provider_name = "local"
+    provider_name = "ollama"
 
     def __init__(
         self,
@@ -213,9 +213,9 @@ class LocalProvider(BaseProvider):
 
             return [
                 ProviderModelInfo(
-                    id=f"local/{m['name']}",
+                    id=f"ollama/{m['name']}",
                     name=m["name"],
-                    provider="local",
+                    provider="ollama",
                     capabilities=["chat"],
                 )
                 for m in data.get("models", [])

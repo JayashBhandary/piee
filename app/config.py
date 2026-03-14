@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     # ── Provider Bootstrap ──────────────────────
     openai_api_key: Optional[str] = None
     anthropic_api_key: Optional[str] = None
-    local_inference_url: str = "http://localhost:11434"
+    ollama_base_url: str = "http://localhost:11434"
 
     # ── Feature Flag Overrides ──────────────────
     billing_enabled: Optional[bool] = None

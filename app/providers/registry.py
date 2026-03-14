@@ -43,7 +43,7 @@ class ProviderRegistry:
         """Create providers from environment variables (first-run convenience)."""
         from app.providers.openai_provider import OpenAIProvider
         from app.providers.anthropic_provider import AnthropicProvider
-        from app.providers.local_provider import LocalProvider
+        from app.providers.ollama_provider import OllamaProvider
 
         if self.settings.openai_api_key:
             self._providers["openai"] = OpenAIProvider(
@@ -55,9 +55,9 @@ class ProviderRegistry:
                 api_key=self.settings.anthropic_api_key,
             )
 
-        # Local provider is always available
-        self._providers["local"] = LocalProvider(
-            base_url=self.settings.local_inference_url,
+        # Ollama provider is always available locally
+        self._providers["ollama"] = OllamaProvider(
+            base_url=self.settings.ollama_base_url,
         )
 
     async def _load_from_db(self) -> None:
@@ -101,12 +101,12 @@ class ProviderRegistry:
         """Factory method to create a provider by name."""
         from app.providers.openai_provider import OpenAIProvider
         from app.providers.anthropic_provider import AnthropicProvider
-        from app.providers.local_provider import LocalProvider
+        from app.providers.ollama_provider import OllamaProvider
 
         provider_map = {
             "openai": OpenAIProvider,
             "anthropic": AnthropicProvider,
-            "local": LocalProvider,
+            "ollama": OllamaProvider,
         }
 
         cls = provider_map.get(name)

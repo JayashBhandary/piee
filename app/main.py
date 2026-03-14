@@ -8,6 +8,7 @@ Supports both local and cloud deployment modes.
 from __future__ import annotations
 
 import logging
+import json
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -50,6 +51,44 @@ async def lifespan(app: FastAPI):
         await registry.initialize()
         providers = registry.list_providers()
         logger.info(f"🔌 Providers loaded: {', '.join(providers)}")
+
+        # Auto-seed Ollama models
+        ollama_provider = registry.get("ollama")
+        if ollama_provider:
+            try:
+                from app.router.service import ModelRegistryService
+                from prisma import Prisma
+                
+                ollama_models = await ollama_provider.list_models()
+                if ollama_models:
+                    db = Prisma()
+                    await db.connect()
+                    try:
+                        seeded_ollama = 0
+                        for om in ollama_models:
+                            existing = await ModelRegistryService.get_model(db, om.id)
+                            if not existing:
+                                await db.modelregistry.create(
+                                    data={
+                                        "modelId": om.id,
+                                        "displayName": om.name,
+                                        "provider": "ollama",
+                                        "routingMode": "LOCAL",
+                                        "capabilities": json.dumps(om.capabilities),
+                                        "contextWindow": 4096,
+                                        "inputPricePerM": 0,
+                                        "outputPricePerM": 0,
+                                        "isPremium": False,
+                                    }
+                                )
+                                seeded_ollama += 1
+                        if seeded_ollama > 0:
+                            logger.info(f"🦙 Auto-registered {seeded_ollama} Ollama models")
+                    finally:
+                        await db.disconnect()
+            except Exception as e:
+                logger.warning(f"⚠️  Failed to seed Ollama models: {e}")
+
     except Exception as e:
         logger.warning(f"⚠️  Provider initialization: {e}")
 
@@ -100,6 +139,7 @@ def create_app() -> FastAPI:
     from app.api.chat import router as chat_router
     from app.api.embeddings import router as embeddings_router
     from app.api.models_api import router as models_router
+    from app.api.ollama_api import router as ollama_router
     from app.billing.router import router as billing_router
     from app.audit.router import router as audit_router
 
@@ -107,6 +147,7 @@ def create_app() -> FastAPI:
     app.include_router(chat_router)
     app.include_router(embeddings_router)
     app.include_router(models_router)
+    app.include_router(ollama_router)
     app.include_router(billing_router)
     app.include_router(audit_router)
 

@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     debug: bool = False
+    next_public_api_url: str = Field(
+        default="http://localhost:8000",
+        description="Public API URL for the dashboard (Next.js)",
+    )
 
     # ── Provider Bootstrap ──────────────────────
     openai_api_key: Optional[str] = None

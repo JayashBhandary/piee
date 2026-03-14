@@ -63,7 +63,8 @@ You can run the stack locally using the provided `Makefile`:
 ```bash
 cp .env.example .env
 make setup   # Creates .env, Python .venv, installs Node deps, sets up DB
-make dev     # Starts both API (8000) and Dashboard (3000) in parallel
+make dev     # Starts both API (8000) and Dashboard (3000) in parallel (Hot-reloading Development Mode)
+make start   # Builds the Dashboard and starts both API and Dashboard in parallel (Production Mode)
 ```
 
 The backend runs inside a localized Python virtual environment (`.venv`). If you need to run python commands manually, either activate it (`source .venv/bin/activate`) or use the binaries in `.venv/bin/`.

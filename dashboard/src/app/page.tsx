@@ -17,6 +17,11 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   Table,
   TableBody,
@@ -485,7 +490,7 @@ function OllamaControls({ onSync }: { onSync: () => void }) {
       if (res.status === "success") {
         setLocalModels(res.models);
       }
-    } catch {}
+    } catch { }
     setLoading(false);
   };
 
@@ -515,24 +520,24 @@ function OllamaControls({ onSync }: { onSync: () => void }) {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        
+
         const chunk = decoder.decode(value, { stream: true });
         const lines = chunk.split('\n').filter(Boolean);
         for (const line of lines) {
-           try {
-             const data = JSON.parse(line);
-             let progStr = data.status || "";
-             if (data.total && data.completed) {
-               const pct = Math.round((data.completed / data.total) * 100);
-               progStr += ` (${pct}%)`;
-             }
-             if (data.error) {
-               progStr = `Error: ${data.error}`;
-             }
-             setPullProgress(progStr);
-           } catch {
-             // pass
-           }
+          try {
+            const data = JSON.parse(line);
+            let progStr = data.status || "";
+            if (data.total && data.completed) {
+              const pct = Math.round((data.completed / data.total) * 100);
+              progStr += ` (${pct}%)`;
+            }
+            if (data.error) {
+              progStr = `Error: ${data.error}`;
+            }
+            setPullProgress(progStr);
+          } catch {
+            // pass
+          }
         }
       }
 
@@ -586,17 +591,17 @@ function OllamaControls({ onSync }: { onSync: () => void }) {
             Refresh
           </Button>
         </div>
-        
+
         {status?.status === "online" && (
           <>
             <Separator />
             <div className="flex items-end gap-3">
               <div className="flex-1 space-y-2">
                 <Label>Pull New Model</Label>
-                <Input 
-                  placeholder="e.g. llama3, qwen2.5:0.5b..." 
-                  value={pullName} 
-                  onChange={e => setPullName(e.target.value)} 
+                <Input
+                  placeholder="e.g. llama3, qwen2.5:0.5b..."
+                  value={pullName}
+                  onChange={e => setPullName(e.target.value)}
                   disabled={pulling}
                 />
               </div>
@@ -610,17 +615,17 @@ function OllamaControls({ onSync }: { onSync: () => void }) {
                 {Math.random() ? pullProgress : pullProgress /* Force text change re-render avoidance hack is not needed, string changes normally */}
               </p>
             )}
-            
+
             <div className="space-y-2 mt-4">
               <Label>Installed Models</Label>
               <div className="border rounded-md overflow-hidden divide-y">
                 {loading ? (
-                   <div className="p-8 text-center text-sm text-muted-foreground">
-                     <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
-                     Loading local models...
-                   </div>
+                  <div className="p-8 text-center text-sm text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                    Loading local models...
+                  </div>
                 ) : localModels.length === 0 ? (
-                   <div className="p-8 text-center text-sm text-muted-foreground">No local models found. Use the input above to pull one from the Ollama library.</div>
+                  <div className="p-8 text-center text-sm text-muted-foreground">No local models found. Use the input above to pull one from the Ollama library.</div>
                 ) : (
                   localModels.map((lm) => (
                     <div key={lm.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-card gap-3">
@@ -634,12 +639,12 @@ function OllamaControls({ onSync }: { onSync: () => void }) {
                         </div>
                       </div>
                       <div className="flex gap-2 shrink-0">
-                         <div className="flex items-center gap-1.5 bg-muted/50 px-2.5 py-1 rounded-md text-xs font-mono text-muted-foreground border">
-                           ollama run {lm.name}
-                         </div>
-                         <Button variant="secondary" size="sm" onClick={() => syncModel(lm.name)}>
-                           Sync
-                         </Button>
+                        <div className="flex items-center gap-1.5 bg-muted/50 px-2.5 py-1 rounded-md text-xs font-mono text-muted-foreground border">
+                          ollama run {lm.name}
+                        </div>
+                        <Button variant="secondary" size="sm" onClick={() => syncModel(lm.name)}>
+                          Sync
+                        </Button>
                       </div>
                     </div>
                   ))
@@ -1215,13 +1220,16 @@ function SandboxPage() {
   const [apiKey, setApiKey] = useState("");
   const [models, setModels] = useState<any[]>([]);
   const [selectedModel, setSelectedModel] = useState("");
-  const [messages, setMessages] = useState<{ role: string; content: string }[]>([
-    { role: "system", content: "You are a helpful assistant." },
-  ]);
+  const [systemPrompt, setSystemPrompt] = useState("You are a helpful AI assistant. Be clear, concise, and professional.");
+  const [temperature, setTemperature] = useState([0.7]);
+  const [maxTokens, setMaxTokens] = useState([2048]);
+  const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(true);
   const [error, setError] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     fetch(`${API_URL}/v1/models`)
@@ -1234,24 +1242,21 @@ function SandboxPage() {
   }, []);
 
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleSend = async () => {
-    if (!input.trim()) return;
-    if (!apiKey.trim()) {
-      setError("Please provide an API key");
-      return;
-    }
-    if (!selectedModel) {
-      setError("Please select a model");
-      return;
-    }
+    if (!input.trim() || loading) return;
+    if (!apiKey.trim()) { setError("Please provide an API key."); return; }
+    if (!selectedModel) { setError("Please select a model."); return; }
 
-    const newMessages = [...messages, { role: "user", content: input }];
-    setMessages(newMessages);
+    const apiMessages = [
+      { role: "system", content: systemPrompt },
+      ...messages,
+      { role: "user", content: input },
+    ];
+    const displayMessages = [...messages, { role: "user", content: input }];
+    setMessages(displayMessages);
     setInput("");
     setError("");
     setLoading(true);
@@ -1259,139 +1264,275 @@ function SandboxPage() {
     try {
       const res = await fetch(`${API_URL}/v1/chat/completions`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
-        },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
         body: JSON.stringify({
           model: selectedModel,
-          messages: newMessages,
-          stream: false
+          messages: apiMessages,
+          stream: isStreaming,
+          temperature: temperature[0],
+          max_tokens: maxTokens[0],
         })
       });
 
-      const data = await res.json();
       if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
         throw new Error(data.error?.message || data.detail || "Request failed");
       }
 
-      if (data.choices && data.choices[0]?.message) {
-        setMessages([...newMessages, data.choices[0].message]);
+      if (isStreaming) {
+        if (!res.body) throw new Error("No response body");
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let assistantContent = "";
+        const withPlaceholder = [...displayMessages, { role: "assistant", content: "" }];
+        setMessages(withPlaceholder);
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          for (const line of decoder.decode(value, { stream: true }).split("\n").filter(Boolean)) {
+            if (!line.startsWith("data: ")) continue;
+            const dataStr = line.slice(6).trim();
+            if (dataStr === "[DONE]") break;
+            try {
+              const chunk = JSON.parse(dataStr);
+              if (chunk.error) throw new Error(chunk.error.message || "Stream error");
+              const delta = chunk.choices?.[0]?.delta?.content;
+              if (delta) {
+                assistantContent += delta;
+                setMessages([...displayMessages, { role: "assistant", content: assistantContent }]);
+              }
+            } catch { /* ignore parse errors on partial chunks */ }
+          }
+        }
       } else {
-        throw new Error("Invalid response format");
+        const data = await res.json();
+        if (data.choices?.[0]?.message) {
+          setMessages([...displayMessages, data.choices[0].message]);
+        } else {
+          throw new Error("Invalid response format");
+        }
       }
     } catch (err: any) {
       setError(err.message || "An error occurred");
-      setMessages([...newMessages]); // Keep user message
     } finally {
       setLoading(false);
+      textareaRef.current?.focus();
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const handleClearChat = () => {
+    setMessages([]);
+    setError("");
+  };
+
+  const visibleMessages = messages.filter(m => m.role !== "system");
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Sandbox</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Test Chat Completions directly with your API Keys
-        </p>
+    <div className="flex flex-col" style={{ height: "calc(100vh - 7rem)" }}>
+      {/* ── Page Header ── */}
+      <div className="flex items-center justify-between shrink-0 mb-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Sandbox</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Test models interactively with full markdown rendering.</p>
+        </div>
+        <Button
+          variant="ghost" size="sm"
+          onClick={handleClearChat}
+          disabled={messages.length === 0 && !error}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <Trash2 className="h-4 w-4 mr-1.5" /> Clear
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 items-start">
-        {/* Left Config */}
-        <div className="space-y-4">
+      <div className="flex-1 min-h-0 flex gap-4">
+        {/* ── Left: Config Sidebar ── */}
+        <div className="w-72 shrink-0 flex flex-col gap-3 overflow-y-auto pr-1">
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base text-muted-foreground flex items-center gap-2">
-                <Settings className="h-4 w-4" /> Configuration
+            <CardHeader className="px-4 py-3 pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+                <Key className="h-3.5 w-3.5" /> Credentials
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="apiKey">API Key</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="apiKey"
-                    type="password"
-                    placeholder="pk-..."
-                    value={apiKey}
-                    onChange={(e) => { setApiKey(e.target.value); setError(""); }}
-                  />
-                </div>
-                <p className="text-[11px] text-muted-foreground">Required for authentication.</p>
+            <CardContent className="px-4 pb-4 space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="sb-apikey" className="text-xs">API Key</Label>
+                <Input
+                  id="sb-apikey"
+                  type="password"
+                  placeholder="pk-..."
+                  value={apiKey}
+                  onChange={(e) => { setApiKey(e.target.value); setError(""); }}
+                  className="h-8 text-sm"
+                />
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="modelSelect">Model</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="sb-model" className="text-xs">Model</Label>
                 <select
-                  id="modelSelect"
+                  id="sb-model"
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
-                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-8 w-full rounded-md border border-input bg-background px-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 >
-                  {models.length === 0 && <option value="" disabled>Loading models...</option>}
-                  {models.map(m => (
-                    <option key={m.id} value={m.id}>{m.id}</option>
-                  ))}
+                  {models.length === 0 && <option value="" disabled>Loading...</option>}
+                  {models.map(m => <option key={m.id} value={m.id}>{m.id}</option>)}
                 </select>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="px-4 py-3 pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+                <Settings className="h-3.5 w-3.5" /> Parameters
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4 space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs">System Prompt</Label>
+                <Textarea
+                  value={systemPrompt}
+                  onChange={e => setSystemPrompt(e.target.value)}
+                  rows={4}
+                  placeholder="You are a helpful assistant..."
+                  className="text-xs resize-none leading-relaxed"
+                />
+              </div>
+              <Separator />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Temperature</Label>
+                  <span className="text-xs font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{temperature[0].toFixed(1)}</span>
+                </div>
+                <Slider value={temperature} onValueChange={setTemperature} min={0} max={2} step={0.1} />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Max Tokens</Label>
+                  <span className="text-xs font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{maxTokens[0]}</span>
+                </div>
+                <Slider value={maxTokens} onValueChange={setMaxTokens} min={128} max={8192} step={128} />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-xs">Stream</Label>
+                  <p className="text-[10px] text-muted-foreground">Token-by-token output</p>
+                </div>
+                <Switch id="sb-stream" checked={isStreaming} onCheckedChange={setIsStreaming} />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Right Chat Preview */}
-        <Card className="flex flex-col h-[600px] overflow-hidden">
-          <CardHeader className="border-b py-3 px-4 bg-muted/30">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-base font-medium">Chat Preview</CardTitle>
-            </div>
-            {error && (
-              <div className="text-xs text-destructive mt-2 flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" /> {error}
+        {/* ── Right: Chat Area ── */}
+        <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {/* Messages */}
+          <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-5">
+            {visibleMessages.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center gap-3 text-muted-foreground">
+                <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="h-7 w-7 text-primary" />
+                </div>
+                <div>
+                  <p className="text-base font-medium text-foreground">Playground Ready</p>
+                  <p className="text-sm mt-0.5">Fill in your API key and start a conversation.</p>
+                </div>
+              </div>
+            ) : (
+              visibleMessages.map((m, i) => (
+                <div key={i} className={`flex gap-3 ${ m.role === "user" ? "flex-row-reverse" : "" }`}>
+                  {/* Avatar */}
+                  <div className={`shrink-0 h-8 w-8 rounded-full border flex items-center justify-center text-xs font-semibold ${
+                    m.role === "user"
+                      ? "bg-primary text-primary-foreground border-primary/50"
+                      : "bg-muted text-muted-foreground border-border"
+                  }`}>
+                    {m.role === "user" ? <UserIcon className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+                  </div>
+                  {/* Bubble */}
+                  <div className={`max-w-[78%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
+                    m.role === "user"
+                      ? "bg-primary text-primary-foreground rounded-tr-sm"
+                      : "bg-muted/50 border rounded-tl-sm"
+                  }`}>
+                    {m.role === "user" ? (
+                      <span className="whitespace-pre-wrap">{m.content}</span>
+                    ) : (
+                      <div className="prose prose-sm dark:prose-invert max-w-none
+                        prose-p:my-1 prose-p:leading-relaxed
+                        prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-1
+                        prose-code:text-[12px] prose-code:before:content-none prose-code:after:content-none
+                        prose-code:bg-black/10 dark:prose-code:bg-white/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
+                        prose-pre:bg-black/10 dark:prose-pre:bg-white/5 prose-pre:rounded-lg prose-pre:p-3 prose-pre:my-2
+                        prose-ul:my-1 prose-ol:my-1 prose-li:my-0
+                        prose-blockquote:border-l-primary prose-blockquote:text-muted-foreground">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {m.content || "▋"}
+                        </ReactMarkdown>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+            {/* Typing indicator (non-streaming) */}
+            {loading && !isStreaming && (
+              <div className="flex gap-3">
+                <div className="shrink-0 h-8 w-8 rounded-full border bg-muted flex items-center justify-center">
+                  <Bot className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-muted/50 border flex items-center gap-1.5 shadow-sm">
+                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
               </div>
             )}
-          </CardHeader>
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.map((m, i) => (
-              <div key={i} className={`flex gap-3 text-sm ${m.role === "user" ? "flex-row-reverse" : ""}`}>
-                <div className={`shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${m.role === "system" ? "bg-muted" : m.role === "user" ? "bg-primary text-primary-foreground" : "bg-blue-500/10 text-blue-500"}`}>
-                  {m.role === "system" ? <Settings className="h-4 w-4" /> : m.role === "user" ? <UserIcon className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-                </div>
-                <div className={`max-w-[75%] px-4 py-2 rounded-2xl ${m.role === "user" ? "bg-primary text-primary-foreground" : m.role === "system" ? "bg-muted text-muted-foreground italic text-xs" : "bg-muted/50 border"}`}>
-                  <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p>
-                </div>
-              </div>
-            ))}
-            {loading && (
-              <div className="flex gap-3 text-sm">
-                <div className="shrink-0 h-8 w-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center">
-                  <Bot className="h-4 w-4" />
-                </div>
-                <div className="px-4 py-2 rounded-2xl bg-muted/50 border flex items-center gap-1 text-muted-foreground">
-                  <span className="h-1.5 w-1.5 rounded-full bg-current animate-bounce" style={{ animationDelay: "0ms" }}></span>
-                  <span className="h-1.5 w-1.5 rounded-full bg-current animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                  <span className="h-1.5 w-1.5 rounded-full bg-current animate-bounce" style={{ animationDelay: "300ms" }}></span>
-                </div>
+            {error && (
+              <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2">
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>{error}</span>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="p-4 bg-background border-t mt-auto">
-            <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2">
-              <Input
-                placeholder="Type a message..."
+          {/* Input Bar */}
+          <div className="shrink-0 border-t p-4 bg-background/80 backdrop-blur">
+            <div className="relative">
+              <Textarea
+                ref={textareaRef}
+                placeholder="Message the model… (Enter to send, Shift+Enter for newline)"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
                 disabled={loading}
-                className="flex-1"
+                rows={1}
+                className="resize-none pr-12 min-h-[44px] max-h-40 text-sm leading-relaxed py-3 overflow-auto"
               />
-              <Button type="submit" disabled={loading || !input.trim()}>
-                <Send className="mr-2 h-4 w-4" /> Send
-              </Button>
-            </form>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    onClick={handleSend}
+                    disabled={loading || !input.trim()}
+                    className="absolute right-2 bottom-2 h-8 w-8 rounded-lg"
+                  >
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Send (Enter)</TooltipContent>
+              </Tooltip>
+            </div>
           </div>
         </Card>
       </div>
